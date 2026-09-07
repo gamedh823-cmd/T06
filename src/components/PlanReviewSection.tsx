@@ -81,6 +81,7 @@ export default async function PlanReviewSection({ plan }: { plan: Plan }) {
         <input type="hidden" name="plan_id" value={plan.id} />
         <input
           name="improvement_note"
+          required
           placeholder="다음 계획으로 넘길 고칠 점 한 줄"
           className={`${INPUT_CLASS} mt-0 flex-1`}
         />

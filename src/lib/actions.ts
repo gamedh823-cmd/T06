@@ -162,6 +162,7 @@ export async function updateTodo(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/plans/${plan_id}`);
+  redirect(`/plans/${plan_id}`);
 }
 
 export async function deleteTodo(formData: FormData) {

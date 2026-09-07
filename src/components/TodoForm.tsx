@@ -1,4 +1,4 @@
-import { BUTTON_PRIMARY_CLASS, CARD_CLASS, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui";
+import { CARD_CLASS, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui";
 import type { Todo } from "@/lib/types";
 
 interface Props {
@@ -70,7 +70,10 @@ export default function TodoForm({ action, planId, defaultValues, submitLabel }:
         </div>
       </div>
 
-      <button type="submit" className={BUTTON_PRIMARY_CLASS}>
+      <button
+        type="submit"
+        className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-neutral-900"
+      >
         {submitLabel}
       </button>
     </form>

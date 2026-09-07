@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { completeTodo, deleteTodo, uncompleteTodo } from "@/lib/actions";
 import { formatDateKST, formatDateTimeKST, instantToKstLocal, isPastKST } from "@/lib/time";
-import { BUTTON_PRIMARY_CLASS, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui";
+import { INPUT_CLASS, LABEL_CLASS } from "@/lib/ui";
 import { PRIORITY_CHIP, PRIORITY_LABEL } from "@/lib/types";
 import { CalendarIcon, ClockIcon, TagIcon } from "@/components/icons";
 import type { ExecutionRecord, Todo } from "@/lib/types";
@@ -24,7 +24,7 @@ export default function TodoRow({ planId, todo, records }: Props) {
         <div className="flex min-w-0 items-start gap-3">
           <span
             className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] ${
-              done ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-300 text-transparent"
+              done ? "border-emerald-600 bg-emerald-600 text-white" : "border-neutral-300 text-transparent"
             }`}
           >
             ✓
@@ -119,7 +119,10 @@ export default function TodoRow({ planId, todo, records }: Props) {
                 className={INPUT_CLASS}
               />
             </div>
-            <button type="submit" className={BUTTON_PRIMARY_CLASS}>
+            <button
+              type="submit"
+              className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-neutral-900"
+            >
               완료로 저장
             </button>
           </form>

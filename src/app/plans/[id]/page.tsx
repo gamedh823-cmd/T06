@@ -124,7 +124,7 @@ export default async function PlanDetailPage({
         </div>
 
         <details>
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 [&::-webkit-details-marker]:hidden">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-green-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700 [&::-webkit-details-marker]:hidden">
             <PlusIcon /> 할 일 추가
           </summary>
           <div className="mt-3">

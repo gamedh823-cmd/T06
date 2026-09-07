@@ -26,7 +26,7 @@ export default async function HomePage() {
         </h2>
         <Link
           href="/plans/new"
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+          className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700"
         >
           + 새 계획
         </Link>
