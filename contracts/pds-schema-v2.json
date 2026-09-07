@@ -1,0 +1,73 @@
+{
+  "$schema_version": "2",
+  "description": "Plan-Do-See Diary (T06) — final database schema and date/aggregation rules. Source of truth is supabase/schema.sql; this file documents it for review.",
+  "timezone_rule": "All calendar-date fields (period_start, period_end, due_date) represent an Asia/Seoul (KST, UTC+9) calendar day, stored as SQL `date` with no time component. All instant fields (started_at, ended_at, created_at, edited_at) are stored as `timestamptz` (UTC) and converted to KST only for display and for the 'is today past due' comparison.",
+  "tables": {
+    "plans": {
+      "id": "uuid, primary key",
+      "title": "text",
+      "period_start": "date (KST calendar day)",
+      "period_end": "date (KST calendar day)",
+      "priority": "text, one of high | medium | low",
+      "success_criteria": "text",
+      "estimated_minutes": "integer >= 0",
+      "carried_over_note": "text, nullable — improvement note copied in from a previous retrospective",
+      "carried_over_from_retro_id": "uuid, nullable, references retrospectives.id",
+      "created_at": "timestamptz",
+      "updated_at": "timestamptz"
+    },
+    "plan_revisions": {
+      "id": "uuid, primary key",
+      "plan_id": "uuid, references plans.id",
+      "title": "text",
+      "period_start": "date",
+      "period_end": "date",
+      "priority": "text",
+      "success_criteria": "text",
+      "estimated_minutes": "integer",
+      "edited_at": "timestamptz",
+      "rule": "Before any update to a plan row, its current field values are copied into a new plan_revisions row first. The plans row itself is always the latest version; history is read from plan_revisions ordered by edited_at."
+    },
+    "todos": {
+      "id": "uuid, primary key",
+      "plan_id": "uuid, references plans.id",
+      "title": "text",
+      "due_date": "date (KST calendar day)",
+      "priority": "text, one of high | medium | low",
+      "tag": "text",
+      "estimated_minutes": "integer >= 0",
+      "status": "text, one of active | done",
+      "completed_at": "timestamptz, nullable",
+      "deleted_at": "timestamptz, nullable — soft delete so revision/record history stays intact",
+      "created_at": "timestamptz",
+      "updated_at": "timestamptz"
+    },
+    "execution_records": {
+      "id": "uuid, primary key",
+      "todo_id": "uuid, references todos.id",
+      "started_at": "timestamptz",
+      "ended_at": "timestamptz",
+      "actual_minutes": "integer >= 0, derived from ended_at - started_at at creation time",
+      "blocked_reason": "text, nullable",
+      "created_at": "timestamptz",
+      "rule": "Exactly one row is created per completion. The 'complete' action performs `UPDATE todos SET status='done' WHERE id=$1 AND status='active'` and only inserts an execution_records row when that update actually changed a row. A second, near-simultaneous click finds status already 'done', updates zero rows, and inserts nothing — this is what keeps double-clicking idempotent (T06-C21/C22/C27)."
+    },
+    "retrospectives": {
+      "id": "uuid, primary key",
+      "plan_id": "uuid, references plans.id",
+      "improvement_note": "text — the one carry-over line chosen for this plan's retrospective",
+      "created_at": "timestamptz",
+      "carried_over_to_plan_id": "uuid, nullable, references plans.id — set once this note has been pulled into a new plan"
+    }
+  },
+  "aggregation_rules": {
+    "plan_count": "count of todos where plan_id = :plan and deleted_at is null",
+    "completed_count": "count of the above where status = 'done'",
+    "delayed_count": "count of the above where status = 'active' and due_date < today_in_kst() — completed todos are never counted as delayed, and a todo is counted at most once",
+    "blocked_count": "count of the above where at least one linked execution_records row has a non-null, non-empty blocked_reason",
+    "estimated_minutes_total": "sum(todos.estimated_minutes) over the same todo set; 0 if the set is empty",
+    "actual_minutes_total": "sum(execution_records.actual_minutes) joined through todo_id over the same todo set; 0 if there are no records",
+    "difference_minutes": "actual_minutes_total - estimated_minutes_total"
+  },
+  "public_access": "No authentication exists in T06 by design — the results URL and all data are readable by anyone with the link, and RLS policies allow full anonymous read/write via the Supabase anon key. The service role key is never used from the client and never committed. Per-item locking is introduced in T07, not here."
+}
