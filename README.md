@@ -2,7 +2,7 @@
 
 Plan(계획) → Do(실제로 한 일) → See(돌아보기)가 하나로 이어지는 다이어리 앱에, 아이디·비밀번호로 가입·로그인하는 인증을 붙였습니다. 로그인하지 않으면 자료 화면 대신 로그인 화면이 뜨고, 로그인한 계정의 계획·할 일·기록은 그 계정에만 보입니다. 이메일은 받지 않고, 아이디+비밀번호만으로 가입·로그인합니다.
 
-- 실행: 아직 배포 전 — 로컬에서 `npm install && npm run dev` 후 `http://localhost:3000` 접속
+- 실행: [https://plan-do-see-t07.vercel.app](https://plan-do-see-t07.vercel.app)
 - 인증 구현 설명서(무엇을·왜·어디를·어떻게 확인했는지): [인증구현설명서.md](인증구현설명서.md)
 - 통과 기준 체크리스트: [체크리스트.md](체크리스트.md) (T06/T07 모두 포함)
 - 이어받은 T06 결과물: [gamedh823-cmd/T06](https://github.com/gamedh823-cmd/T06) commit [`898e3b3`](https://github.com/gamedh823-cmd/T06/commit/898e3b3754eea83b913a332e9e50d4af0709b606)
