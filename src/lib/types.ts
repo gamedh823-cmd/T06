@@ -3,6 +3,7 @@ export type TodoStatus = "active" | "done";
 
 export interface Plan {
   id: string;
+  user_id: string;
   title: string;
   period_start: string;
   period_end: string;

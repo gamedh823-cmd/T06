@@ -1,8 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { todayKST } from "@/lib/time";
 import type { ExecutionRecord, Plan, PlanRevision, Retrospective, Todo } from "@/lib/types";
 
 export async function getPlans(): Promise<Plan[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("plans")
     .select("*")
@@ -18,6 +19,7 @@ export interface OverallStats {
 }
 
 export async function getOverallStats(): Promise<OverallStats> {
+  const supabase = await createClient();
   const [plans, todos, done] = await Promise.all([
     supabase.from("plans").select("*", { count: "exact", head: true }),
     supabase.from("todos").select("*", { count: "exact", head: true }).is("deleted_at", null),
@@ -35,11 +37,13 @@ export async function getOverallStats(): Promise<OverallStats> {
 }
 
 export async function getPlan(id: string): Promise<Plan | null> {
+  const supabase = await createClient();
   const { data } = await supabase.from("plans").select("*").eq("id", id).maybeSingle();
   return data ?? null;
 }
 
 export async function getPlanRevisions(planId: string): Promise<PlanRevision[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("plan_revisions")
     .select("*")
@@ -84,6 +88,7 @@ function matchesSearch(todo: { title: string; tag: string }, search: string): bo
 }
 
 export async function getTodos(planId: string, filters: TodoFilters): Promise<Todo[]> {
+  const supabase = await createClient();
   let query = supabase.from("todos").select("*").eq("plan_id", planId).is("deleted_at", null);
 
   if (filters.status && filters.status !== "all") {
@@ -108,6 +113,7 @@ export async function getTodosWithRecords(
   planId: string,
   filters: TodoFilters
 ): Promise<TodoWithRecords[]> {
+  const supabase = await createClient();
   let query = supabase
     .from("todos")
     .select("*, execution_records(*)")
@@ -133,11 +139,13 @@ export async function getTodosWithRecords(
 }
 
 export async function getTodo(id: string): Promise<Todo | null> {
+  const supabase = await createClient();
   const { data } = await supabase.from("todos").select("*").eq("id", id).maybeSingle();
   return data ?? null;
 }
 
 export async function getDistinctTags(planId: string): Promise<string[]> {
+  const supabase = await createClient();
   const { data } = await supabase
     .from("todos")
     .select("tag")
@@ -148,6 +156,7 @@ export async function getDistinctTags(planId: string): Promise<string[]> {
 }
 
 export async function getExecutionRecordsForTodo(todoId: string): Promise<ExecutionRecord[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("execution_records")
     .select("*")
@@ -171,6 +180,7 @@ export interface PlanStats {
 }
 
 export async function getPlanStats(planId: string): Promise<PlanStats> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("todos")
     .select("*, execution_records(*)")
@@ -206,6 +216,7 @@ export async function getPlanStats(planId: string): Promise<PlanStats> {
 }
 
 export async function getPendingRetrospectives(): Promise<(Retrospective & { plan_title: string })[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("retrospectives")
     .select("*, plans!retrospectives_plan_id_fkey(title)")
@@ -216,6 +227,7 @@ export async function getPendingRetrospectives(): Promise<(Retrospective & { pla
 }
 
 export async function getRetrospectivesForPlan(planId: string): Promise<Retrospective[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("retrospectives")
     .select("*")

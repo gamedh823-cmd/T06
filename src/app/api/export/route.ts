@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
+  // No .eq("user_id", ...) filters here on purpose — RLS already scopes
+  // every one of these selects to auth.uid()'s own rows, so this exports
+  // exactly the same "my data only" set the rest of the app can see
+  // (T07-C133).
   const [plans, planRevisions, todos, executionRecords, retrospectives] = await Promise.all([
     supabase.from("plans").select("*").order("created_at"),
     supabase.from("plan_revisions").select("*").order("edited_at"),

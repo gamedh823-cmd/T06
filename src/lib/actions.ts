@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { kstLocalToInstant, minutesBetween } from "@/lib/time";
 import type { Priority } from "@/lib/types";
 
@@ -16,6 +16,12 @@ function num(formData: FormData, key: string): number {
 }
 
 export async function createPlan(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("로그인이 필요합니다.");
+
   const title = str(formData, "title");
   const period_start = str(formData, "period_start");
   const period_end = str(formData, "period_end");
@@ -38,9 +44,14 @@ export async function createPlan(formData: FormData) {
     carried_over_note = retro?.improvement_note ?? null;
   }
 
+  // user_id is what plans_owner_all (supabase/schema.sql) checks against
+  // auth.uid() — every other table is scoped only by joining back to this
+  // column, so this is the one place ownership actually gets assigned
+  // (T07-C116).
   const { data: plan, error } = await supabase
     .from("plans")
     .insert({
+      user_id: user.id,
       title,
       period_start,
       period_end,
@@ -67,6 +78,7 @@ export async function createPlan(formData: FormData) {
 }
 
 export async function updatePlan(formData: FormData) {
+  const supabase = await createClient();
   const id = str(formData, "id");
   const title = str(formData, "title");
   const period_start = str(formData, "period_start");
@@ -115,6 +127,7 @@ export async function updatePlan(formData: FormData) {
 }
 
 export async function createTodo(formData: FormData) {
+  const supabase = await createClient();
   const plan_id = str(formData, "plan_id");
   const title = str(formData, "title");
   const due_date = str(formData, "due_date");
@@ -140,6 +153,7 @@ export async function createTodo(formData: FormData) {
 }
 
 export async function updateTodo(formData: FormData) {
+  const supabase = await createClient();
   const id = str(formData, "id");
   const plan_id = str(formData, "plan_id");
   const title = str(formData, "title");
@@ -148,7 +162,11 @@ export async function updateTodo(formData: FormData) {
   const tag = str(formData, "tag");
   const estimated_minutes = num(formData, "estimated_minutes");
 
-  const { error } = await supabase
+  // RLS (todos_owner_all in supabase/schema.sql) hides rows that don't
+  // belong to a plan owned by auth.uid(), so a cross-account UPDATE matches
+  // zero rows instead of erroring — .select().maybeSingle() is what turns
+  // that silent zero-row match into a visible rejection here (T07-C118).
+  const { data: updated, error } = await supabase
     .from("todos")
     .update({
       title,
@@ -158,22 +176,29 @@ export async function updateTodo(formData: FormData) {
       estimated_minutes,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!updated) throw new Error("수정할 수 없습니다. 존재하지 않거나 내 할 일이 아닙니다.");
 
   revalidatePath(`/plans/${plan_id}`);
   redirect(`/plans/${plan_id}`);
 }
 
 export async function deleteTodo(formData: FormData) {
+  const supabase = await createClient();
   const id = str(formData, "id");
   const plan_id = str(formData, "plan_id");
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("todos")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!deleted) throw new Error("지울 수 없습니다. 존재하지 않거나 내 할 일이 아닙니다.");
 
   revalidatePath(`/plans/${plan_id}`);
 }
@@ -183,6 +208,7 @@ export async function deleteTodo(formData: FormData) {
 // second rapid click updates zero rows and skips the insert below — this is
 // what keeps double-clicking "완료" idempotent (T06-C21/C22/C27).
 export async function completeTodo(formData: FormData) {
+  const supabase = await createClient();
   const id = str(formData, "id");
   const plan_id = str(formData, "plan_id");
   const startedLocal = str(formData, "started_at");
@@ -221,6 +247,7 @@ export async function completeTodo(formData: FormData) {
 }
 
 export async function uncompleteTodo(formData: FormData) {
+  const supabase = await createClient();
   const id = str(formData, "id");
   const plan_id = str(formData, "plan_id");
 
@@ -235,6 +262,7 @@ export async function uncompleteTodo(formData: FormData) {
 }
 
 export async function addRetrospectiveNote(formData: FormData) {
+  const supabase = await createClient();
   const plan_id = str(formData, "plan_id");
   const improvement_note = str(formData, "improvement_note");
   if (!improvement_note) throw new Error("고칠 점을 입력해 주세요.");

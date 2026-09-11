@@ -94,6 +94,7 @@ export default function TodoRow({ planId, todo, records }: Props) {
                 <label className={LABEL_CLASS}>시작 시각</label>
                 <input
                   type="datetime-local"
+                  lang="ko-u-hc-h23"
                   name="started_at"
                   required
                   defaultValue={instantToKstLocal(suggestedStart.toISOString())}
@@ -104,6 +105,7 @@ export default function TodoRow({ planId, todo, records }: Props) {
                 <label className={LABEL_CLASS}>종료 시각</label>
                 <input
                   type="datetime-local"
+                  lang="ko-u-hc-h23"
                   name="ended_at"
                   required
                   defaultValue={instantToKstLocal(now.toISOString())}

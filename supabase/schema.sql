@@ -1,15 +1,19 @@
--- Plan-Do-See Diary (T06) schema
+-- Plan-Do-See Diary (T07) schema
 -- All times: due_date / period_start / period_end are plain dates representing
 -- the Asia/Seoul (KST) calendar day. started_at / ended_at / created_at /
 -- edited_at are true instants (timestamptz).
--- No auth: this app has no login (by design for T06). RLS policies below
--- intentionally allow full public read/write via the anon key. Locking
--- individual entries is out of scope here and is handled in T07.
+--
+-- Auth: gain/login is Supabase Auth (auth.users), added in T07. plans.user_id
+-- is the only ownership column anywhere in this schema — every other table
+-- is scoped by walking back up to it. See migrations/20260908000001_add_auth.sql
+-- for how this file's T06 predecessor (fully-open RLS, no user_id) was
+-- migrated into this one without losing the existing rows.
 
 create extension if not exists "pgcrypto";
 
 create table if not exists plans (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   period_start date not null,
   period_end date not null,
@@ -75,29 +79,49 @@ alter table plans
   add constraint plans_carried_over_from_retro_id_fkey
   foreign key (carried_over_from_retro_id) references retrospectives(id);
 
+create index if not exists idx_plans_user_id on plans(user_id);
 create index if not exists idx_todos_plan_id on todos(plan_id);
 create index if not exists idx_execution_records_todo_id on execution_records(todo_id);
 create index if not exists idx_plan_revisions_plan_id on plan_revisions(plan_id);
 create index if not exists idx_retrospectives_plan_id on retrospectives(plan_id);
 
--- Row Level Security: fully open, matching the "no login" design of T06.
+-- Row Level Security: every table is readable/writable only through a path
+-- that leads back to a plans row owned by auth.uid(). A logged-out request
+-- (anon role, no auth.uid()) satisfies none of these, and neither does a
+-- request for someone else's plan_id (T07-C116..C126).
 alter table plans enable row level security;
 alter table plan_revisions enable row level security;
 alter table todos enable row level security;
 alter table execution_records enable row level security;
 alter table retrospectives enable row level security;
 
-drop policy if exists "public_all_plans" on plans;
-create policy "public_all_plans" on plans for all using (true) with check (true);
+drop policy if exists "plans_owner_all" on plans;
+create policy "plans_owner_all" on plans for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
-drop policy if exists "public_all_plan_revisions" on plan_revisions;
-create policy "public_all_plan_revisions" on plan_revisions for all using (true) with check (true);
+drop policy if exists "plan_revisions_owner_all" on plan_revisions;
+create policy "plan_revisions_owner_all" on plan_revisions for all
+  using (exists (select 1 from plans p where p.id = plan_revisions.plan_id and p.user_id = auth.uid()))
+  with check (exists (select 1 from plans p where p.id = plan_revisions.plan_id and p.user_id = auth.uid()));
 
-drop policy if exists "public_all_todos" on todos;
-create policy "public_all_todos" on todos for all using (true) with check (true);
+drop policy if exists "todos_owner_all" on todos;
+create policy "todos_owner_all" on todos for all
+  using (exists (select 1 from plans p where p.id = todos.plan_id and p.user_id = auth.uid()))
+  with check (exists (select 1 from plans p where p.id = todos.plan_id and p.user_id = auth.uid()));
 
-drop policy if exists "public_all_execution_records" on execution_records;
-create policy "public_all_execution_records" on execution_records for all using (true) with check (true);
+drop policy if exists "execution_records_owner_all" on execution_records;
+create policy "execution_records_owner_all" on execution_records for all
+  using (exists (
+    select 1 from todos t join plans p on p.id = t.plan_id
+    where t.id = execution_records.todo_id and p.user_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from todos t join plans p on p.id = t.plan_id
+    where t.id = execution_records.todo_id and p.user_id = auth.uid()
+  ));
 
-drop policy if exists "public_all_retrospectives" on retrospectives;
-create policy "public_all_retrospectives" on retrospectives for all using (true) with check (true);
+drop policy if exists "retrospectives_owner_all" on retrospectives;
+create policy "retrospectives_owner_all" on retrospectives for all
+  using (exists (select 1 from plans p where p.id = retrospectives.plan_id and p.user_id = auth.uid()))
+  with check (exists (select 1 from plans p where p.id = retrospectives.plan_id and p.user_id = auth.uid()));
